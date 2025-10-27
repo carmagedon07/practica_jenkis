@@ -9,8 +9,8 @@ pipeline {
     }
 
     environment {
-        // ejemplo: proyecto-qalatest81  (puedes darle formato distinto si quieres guiones)
-        name_final = "${name_container}${tag_imagen}${puerto_imagen}"
+        // ejemplo final: proyecto-qalatest81
+        name_final = "${params.name_container}-${params.tag_imagen}-${params.puerto_imagen}"
     }
 
     stages {
@@ -18,28 +18,29 @@ pipeline {
         stage('stop/rm') {
             when {
                 expression {
-                    // Ejecutamos docker ps con bat y capturamos salida
+                    // Buscamos si ya existe un contenedor con ese nombre
                     def out = bat(
-                        returnStdout: true,
                         script: """
-                            docker ps -q --filter "name=${env.name_final}"
-                        """
+                            docker ps -aq --filter "name=${env.name_final}"
+                        """,
+                        returnStdout: true
                     ).trim()
 
-                    // Guardamos en variable del pipeline para usar en steps si queremos
-                    env.DOCKER_EXIST = out
+                    // para debug si quieres:
+                    echo "Contenedor encontrado? => '${out}'"
+                    env.DOCKER_ID = out
                     return out != ""
                 }
             }
             steps {
                 script {
-                    // Parar contenedor si está corriendo
+                    // detener contenedor si estaba corriendo
                     bat """
-                        docker stop ${env.name_final}
+                        docker stop ${env.name_final} || exit /b 0
                     """
-                    // Eliminar contenedor
+                    // eliminar contenedor para poder recrearlo con el mismo nombre
                     bat """
-                        docker rm ${env.name_final}
+                        docker rm ${env.name_final} || exit /b 0
                     """
                 }
             }
@@ -48,7 +49,6 @@ pipeline {
         stage('build') {
             steps {
                 script {
-                    // Construir la imagen Docker
                     bat """
                         docker build jobs/dockerweb/ -t ${params.name_imagen}:${params.tag_imagen}
                     """
@@ -59,7 +59,6 @@ pipeline {
         stage('run') {
             steps {
                 script {
-                    // Levantar contenedor mapeando el puerto indicado hacia el 80 interno
                     bat """
                         docker run -dp ${params.puerto_imagen}:80 --name ${env.name_final} ${params.name_imagen}:${params.tag_imagen}
                     """
