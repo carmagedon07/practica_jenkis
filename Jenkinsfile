@@ -1,6 +1,5 @@
 pipeline {
     agent any
-
     environment {
         appName = "variable"
     }
@@ -9,7 +8,7 @@ pipeline {
         stage("paso 1") {
             steps {
                 script {
-                    sh "echo 'hola mundo'"
+                    bat 'echo hola mundo'
                 }
             }
         }
@@ -18,13 +17,13 @@ pipeline {
     post {
         always {
             deleteDir()
-            sh "echo 'fase always'"
+            bat 'echo fase always'
         }
         success {
-            sh "echo 'fase success'"
+            bat 'echo fase success'
         }
         failure {
-            sh "echo 'fase failure'"
+            bat 'echo fase failure'
         }
     }
 }
